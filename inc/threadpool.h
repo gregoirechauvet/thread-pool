@@ -16,9 +16,10 @@ typedef struct {
   pthread_cond_t notify;
   pthread_t threads[THREADS];
   task_t tasks_queue[QUEUE_SIZE];
+  int queued;
   size_t queue_front;
   size_t queue_back;
-  bool stop;
+  short stop;
 } threadpool_t;
 
 void threadpool_init(threadpool_t *pool);

@@ -12,6 +12,7 @@ int main(int argc, char **argv) {
   threadpool_init(&pool);
   sleep(1);
   threadpool_add_task(&pool, &example_task, NULL);
+  sleep(1);
 
   threadpool_destroy(&pool);
 }
