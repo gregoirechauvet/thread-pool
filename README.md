@@ -1,3 +1,3 @@
 ```bash
-gcc -o bin/main main.c -Wall
+gcc -o bin/main -Iinc src/*.c -Wall
 ```
