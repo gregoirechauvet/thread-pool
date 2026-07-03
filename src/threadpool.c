@@ -1,25 +1,23 @@
 #include <pthread.h>
 #include "../inc/threadpool.h"
 
-__thread task_t task;
-
 void *thread_function(void *arg) {
   threadpool_t *pool = (threadpool_t*)arg;
 
-  while(!pool->stop) {
+  while(1) {
     pthread_mutex_lock(&(pool->lock));
 
-    while (pool->stop == 0 && pool->queued == 0) {
+    while (!pool->stop && pool->queued == 0) {
       pthread_cond_wait(&(pool->notify), &(pool->lock));
     }
 
-    if (pool->stop == 1) {
+    if (pool->stop && pool->queued == 0) {
       pthread_mutex_unlock(&(pool->lock));
       return NULL;
     }
 
-    task = pool->tasks_queue[pool->queue_front];
-    pool->queue_front += 1;
+    task_t task = pool->tasks_queue[pool->queue_front];
+    pool->queue_front = (pool->queue_front + 1) % QUEUE_SIZE;
     pool->queued -= 1;
 
     pthread_mutex_unlock(&(pool->lock));
@@ -31,6 +29,10 @@ void *thread_function(void *arg) {
 }
 
 void threadpool_init(threadpool_t *pool) {
+  if (pool == NULL) {
+    return;
+  }
+
   pool->queued = 0;
   pool->queue_front = 0;
   pool->queue_back = 0;
@@ -45,6 +47,10 @@ void threadpool_init(threadpool_t *pool) {
 }
 
 void threadpool_destroy(threadpool_t *pool) {
+  if (pool == NULL) {
+    return;
+  }
+
   pthread_mutex_lock(&(pool->lock));
   pool->stop = 1;
   pthread_mutex_unlock(&(pool->lock));
@@ -60,7 +66,16 @@ void threadpool_destroy(threadpool_t *pool) {
 }
 
 void threadpool_add_task(threadpool_t* pool, void (*function)(void*), void* arg) {
+  if (pool == NULL || function == NULL) {
+    return;
+  }
+
   pthread_mutex_lock(&(pool->lock));
+
+  if (pool->stop) {
+    pthread_mutex_unlock(&(pool->lock));
+    return;
+  }
 
   if (pool->queued == QUEUE_SIZE) {
     pthread_mutex_unlock(&(pool->lock));
